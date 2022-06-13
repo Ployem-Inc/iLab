@@ -126,7 +126,7 @@ class Python(models.Model):
             :returns: <str> code prepared for execution
         """ 
         code = '\n\t\t'.join(map(self._modify_codeline, code.split("\n")))
-        return f"if __name__ == '__main__':\n\timport io\n\timport traceback\n\ttry:\n\t\t{code}\n\t\tprint('{run_over}')\n\texcept Exception as e:\n\t\t{exception_handle}"
+        return f"if __name__ == '__main__':\n\tprint('#^*&starting#(*&^')\n\timport io\n\timport traceback\n\ttry:\n\t\t{code}\n\t\tprint('{run_over}')\n\texcept Exception as e:\n\t\t{exception_handle}"
     
     def _overwrite(self, code):
         """
