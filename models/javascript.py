@@ -5,6 +5,7 @@ import io
 import re
 import os
 import time
+from turtle import st
 import uuid
 import traceback
 import shlex, subprocess
@@ -19,20 +20,14 @@ new_line = "!$$^^new_line$$@#@"
 indent_error = "IndentationError"
 run_over = "#$$##@*run_over$$##@*"
 input_indicator = "#$^@*@input&&@*"
-exception_handle = '\n\t\t'.join(["errors = io.StringIO()", 
-                             "traceback.print_exc(file=errors)", 
-                             "content = str(errors.getvalue())", 
-                             f"content = content.replace('\\n','{new_line}')", 
-                             "print('{}\\t%s' % (content))".format(error), 
-                             "errors.close()"])
 _check_timeout = lambda start, timeout: time.time() - start > timeout 
 infinite_loop = "\033[91mRuntimeError: Code took long, check for infinite loops\033[0m"
 
 
 ##### Classes #####
-class Python(models.Model):
+class Javascript(models.Model):
     """
-    AF(id) = a volatile python interpreter with a globally unique id, self destructs after 24 hours 
+    AF(id) = a volatile javascript interpreter with a globally unique id, self destructs after 24 hours 
 
     Representation Invariant
       - inherits from models.Model
@@ -45,7 +40,7 @@ class Python(models.Model):
     id_value         = uuid.uuid4()
     docker_image     = models.CharField(max_length = alphabet_size)
     id               = models.UUIDField(primary_key = True,  editable = False, unique = True, default = id_value)
-    interpreter_path = models.CharField(max_length = alphabet_size**2, default = f"{Path(__file__).parent.absolute()}{os.sep}interpreters/{id_value}.py")
+    interpreter_path = models.CharField(max_length = alphabet_size**2, default = f"{Path(__file__).parent.absolute()}{os.sep}interpreters/{id_value}.js")
     
     def execute(self, code: str, user_inputs: list = [], n: int = 0, timeout: int = 20) -> bool:
         """
@@ -76,7 +71,7 @@ class Python(models.Model):
             i += 1
             run_error = False
             need_input = False
-            out = str(process.stdout.readline(), 'utf8').strip().replace(f"File \"{self.interpreter_path}\", ", "")
+            out = str(process.stdout.readline(), 'utf8').strip().replace(f"{self.interpreter_path}", "")
 
             if out == run_over: return
             elif out == "": continue
@@ -114,7 +109,7 @@ class Python(models.Model):
         Outputs
             :returns: <subprocess> a sub-process that runs the interpreter
         """
-        command = shlex.split(f"python3 {self.interpreter_path} spwan")
+        command = shlex.split(f"node {self.interpreter_path} spawn")
         return subprocess.Popen(command, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
 
     def _prepare_code(self, code) -> str:
@@ -127,8 +122,8 @@ class Python(models.Model):
         Outputs
             :returns: <str> code prepared for execution
         """ 
-        code = '\n\t\t'.join(map(self._modify_codeline, enumerate(code.split("\n"))))
-        return f"if __name__ == '__main__':\n\tprint('#^*&starting#(*&^')\n\timport io\n\timport traceback\n\ttry:\n\t\t{code}\n\t\tprint('{run_over}')\n\texcept Exception as e:\n\t\t{exception_handle}"
+        code = '\n\t'.join(map(self._modify_codeline, enumerate(code.split("\n"))))
+        return f"try {{\n\tconsole.log('#^*&starting#(*&^')\n\t{code}\n\n\tconsole.log('{run_over}')\n}} catch (error) {{console.log(`{error} ${{error}}`)}}"
     
     def _overwrite(self, code):
         """
@@ -157,9 +152,5 @@ class Python(models.Model):
             <str> modified line
         """
         n, line = line
-        input_calls = re.findall(r"input\([\'\"].*[\'\"]\)", line)
-        for input_call in input_calls:
-            modified_call = "input('{}' + '> ' + {} + {})".format(input_indicator, input_call[6:-1], repr('\\n'))
-            line = re.sub(r"{}".format(input_call.replace('(', '\(').replace(')', '\)')), modified_call, line)
-
+        #TODO: any modifications
         return line
